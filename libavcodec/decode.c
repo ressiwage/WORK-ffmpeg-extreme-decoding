@@ -724,7 +724,18 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
     return ret;
 }
-
+/*
+    check if codec is opened or is decoder
+    check if not draining_started (The caller has submitted a NULL packet on input)
+    if avpacket valid and avpacket.size not valid and avpacket.data valid then error
+    if avpacket valid and (avpacket.data valid or avpacket.side_data_elems valid) {
+        if buffer not empty then error again
+        reference buffer packet with avpacket
+    } else {draining_started = 1}
+    if not draining_started and not buffer.frame[0] {
+        decode_receive_frame_internal
+    }
+*/
 int attribute_align_arg avcodec_send_packet(AVCodecContext *avctx, const AVPacket *avpkt)
 {
     AVCodecInternal *avci = avctx->internal;

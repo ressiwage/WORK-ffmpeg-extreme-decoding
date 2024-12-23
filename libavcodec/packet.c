@@ -253,7 +253,6 @@ uint8_t *av_packet_get_side_data(const AVPacket *pkt, enum AVPacketSideDataType 
                                  size_t *size)
 {
     int i;
-
     for (i = 0; i < pkt->side_data_elems; i++) {
         if (pkt->side_data[i].type == type) {
             if (size)

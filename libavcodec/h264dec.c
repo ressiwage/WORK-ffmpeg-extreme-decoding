@@ -639,7 +639,7 @@ static int decode_nal_units(H264Context *h, const uint8_t *buf, int buf_size)
 
         err = 0;
         switch (nal->type) {
-        case H264_NAL_IDR_SLICE:
+        case H264_NAL_IDR_SLICE: //1%
             if ((nal->data[1] & 0xFC) == 0x98) {
                 av_log(h->avctx, AV_LOG_ERROR, "Invalid inter IDR frame\n");
                 h->next_outputed_poc = INT_MIN;
@@ -651,7 +651,7 @@ static int decode_nal_units(H264Context *h, const uint8_t *buf, int buf_size)
             }
             idr_cleared = 1;
             h->has_recovery_point = 1;
-        case H264_NAL_SLICE:
+        case H264_NAL_SLICE: //99%
             h->has_slice = 1;
 
             if ((err = ff_h264_queue_decode_slice(h, nal))) {
@@ -1050,6 +1050,7 @@ static int h264_decode_frame(AVCodecContext *avctx, AVFrame *pict,
     if (buf_size == 0)
         return send_next_delayed_frame(h, pict, got_frame, 0);
 
+    //если новая экстрадата есть в пакете
     if (av_packet_get_side_data(avpkt, AV_PKT_DATA_NEW_EXTRADATA, NULL)) {
         size_t side_size;
         uint8_t *side = av_packet_get_side_data(avpkt, AV_PKT_DATA_NEW_EXTRADATA, &side_size);
@@ -1057,22 +1058,23 @@ static int h264_decode_frame(AVCodecContext *avctx, AVFrame *pict,
                                  &h->ps, &h->is_avc, &h->nal_length_size,
                                  avctx->err_recognition, avctx);
     }
-    if (h->is_avc && buf_size >= 9 && buf[0]==1 && buf[2]==0 && (buf[4]&0xFC)==0xFC) {
+    //если экстрадата в буфере
+    if (h->is_avc && buf_size >= 9 && buf[0]==1 && buf[2]==0 && (buf[4]&0xFC)==0xFC) { //buf[4] = 111111XX (x-any)
         if (is_avcc_extradata(buf, buf_size))
             return ff_h264_decode_extradata(buf, buf_size,
                                             &h->ps, &h->is_avc, &h->nal_length_size,
                                             avctx->err_recognition, avctx);
     }
-
+    //декодируем nal. можно вырезать оттуда все ненужное
     buf_index = decode_nal_units(h, buf, buf_size);
     if (buf_index < 0)
         return AVERROR_INVALIDDATA;
-
+    //если не присвоен указатель в 264контексте на текущую карт и тип нала -- конец последовательности то (создаем картинку из буфера?)
     if (!h->cur_pic_ptr && h->nal_unit_type == H264_NAL_END_SEQUENCE) {
         av_assert0(buf_index <= buf_size);
         return send_next_delayed_frame(h, pict, got_frame, buf_index);
     }
-
+    //ошибка если нет фрейма в 264 контексте
     if (!(avctx->flags2 & AV_CODEC_FLAG2_CHUNKS) && (!h->cur_pic_ptr || !h->has_slice)) {
         if (avctx->skip_frame >= AVDISCARD_NONREF ||
             buf_size >= 4 && !memcmp("Q264", buf, 4))
@@ -1080,7 +1082,7 @@ static int h264_decode_frame(AVCodecContext *avctx, AVFrame *pict,
         av_log(avctx, AV_LOG_ERROR, "no frame!\n");
         return AVERROR_INVALIDDATA;
     }
-
+    //а?
     if (!(avctx->flags2 & AV_CODEC_FLAG2_CHUNKS) ||
         (h->mb_y >= h->mb_height && h->mb_height)) {
         if ((ret = ff_h264_field_end(h, &h->slice_ctx[0], 0)) < 0)
@@ -1093,9 +1095,9 @@ static int h264_decode_frame(AVCodecContext *avctx, AVFrame *pict,
                 return ret;
         }
     }
-
+    //проверяем что avframe задан и значение по адресу got_frame положительное
     av_assert0(pict->buf[0] || !*got_frame);
-
+    //освобождаем последнюю картинку для ec
     ff_h264_unref_picture(&h->last_pic_for_ec);
 
     return get_consumed_bytes(buf_index, buf_size);

@@ -798,7 +798,8 @@ static av_always_inline void hl_decode_mb_idct_luma(const H264Context *h, H264Sl
 #include "h264_mb_template.c"
 
 void ff_h264_hl_decode_mb(const H264Context *h, H264SliceContext *sl)
-{
+{   
+    // printf("debug from h264_mb"); тут срабатывает
     const int mb_xy   = sl->mb_xy;
     const int mb_type = h->cur_pic.mb_type[mb_xy];
     int is_complex    = CONFIG_SMALL || sl->is_complex ||
