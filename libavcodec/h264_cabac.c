@@ -1926,6 +1926,7 @@ int ff_h264_decode_mb_cabac(const H264Context *h, H264SliceContext *sl)
     const int decode_chroma = sps->chroma_format_idc == 1 || sps->chroma_format_idc == 2;
     const int pixel_shift = h->pixel_shift;
 
+    printf("cabac\n");
     mb_xy = sl->mb_xy = sl->mb_x + sl->mb_y*h->mb_stride;
 
     ff_tlog(h->avctx, "pic:%d mb:%d/%d\n", h->poc.frame_num, sl->mb_x, sl->mb_y);
@@ -2024,7 +2025,7 @@ int ff_h264_decode_mb_cabac(const H264Context *h, H264SliceContext *sl)
 decode_intra_mb:
         partition_count = 0;
         cbp                      = ff_h264_i_mb_type_info[mb_type].cbp;
-        sl->intra16x16_pred_mode = ff_h264_i_mb_type_info[mb_type].pred_mode;
+        sl->intra16x16_pred_mode = 0;//ff_h264_i_mb_type_info[mb_type].pred_mode;
         mb_type                  = ff_h264_i_mb_type_info[mb_type].type;
     }
     if (MB_FIELD(sl))

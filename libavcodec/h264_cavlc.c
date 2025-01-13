@@ -631,7 +631,7 @@ int decode_luma_residual(const H264Context *h, H264SliceContext *sl,
         int new_cbp = 0;
         for(i8x8=0; i8x8<4; i8x8++){
             if(cbp & (1<<i8x8)){
-                if(IS_8x8DCT(mb_type)){
+                if(IS_8x8DCT(mb_type)){ //4x4 intra + direct cosine transform
                     int16_t *buf = &sl->mb[64*i8x8+256*p << pixel_shift];
                     uint8_t *nnz;
                     for(i4x4=0; i4x4<4; i4x4++){
@@ -677,6 +677,7 @@ int ff_h264_decode_mb_cavlc(const H264Context *h, H264SliceContext *sl)
     cbp = 0; /* avoid warning. FIXME: find a solution without slowing
                 down the code */
     if (sl->slice_type_nos != AV_PICTURE_TYPE_I) {
+
         if (sl->mb_skip_run == -1) {
             unsigned mb_skip_run = get_ue_golomb_long(&sl->gb);
             if (mb_skip_run > h->mb_num) {
@@ -704,18 +705,18 @@ int ff_h264_decode_mb_cavlc(const H264Context *h, H264SliceContext *sl)
 
     mb_type= get_ue_golomb(&sl->gb);
     if (sl->slice_type_nos == AV_PICTURE_TYPE_B) {
-        if(mb_type < 23){
+        if(mb_type < 23){//интер
             partition_count = ff_h264_b_mb_type_info[mb_type].partition_count;
             mb_type         = ff_h264_b_mb_type_info[mb_type].type;
-        }else{
+        }else{//интра
             mb_type -= 23;
             goto decode_intra_mb;
         }
     } else if (sl->slice_type_nos == AV_PICTURE_TYPE_P) {
-        if(mb_type < 5){
+        if(mb_type < 5){ //интер
             partition_count = ff_h264_p_mb_type_info[mb_type].partition_count;
             mb_type         = ff_h264_p_mb_type_info[mb_type].type;
-        }else{
+        }else{ // интра
             mb_type -= 5;
             goto decode_intra_mb;
         }
@@ -729,8 +730,9 @@ decode_intra_mb:
             return -1;
         }
         partition_count=0;
+        static int intra16x16pmtosimple[] = {0,0,0,3};
         cbp                      = ff_h264_i_mb_type_info[mb_type].cbp;
-        sl->intra16x16_pred_mode = ff_h264_i_mb_type_info[mb_type].pred_mode;
+        sl->intra16x16_pred_mode = intra16x16pmtosimple[ff_h264_i_mb_type_info[mb_type].pred_mode];
         mb_type                  = ff_h264_i_mb_type_info[mb_type].type;
     }
 
@@ -764,17 +766,16 @@ decode_intra_mb:
     fill_decode_caches(h, sl, mb_type);
 
     //mb_pred
-    if(IS_INTRA(mb_type)){
+    if(IS_INTRA(mb_type)){ //intra macroblock is bXXX..111
         int pred_mode;
 //            init_top_left_availability(h);
-        if(IS_INTRA4x4(mb_type)){
+        if(IS_INTRA4x4(mb_type)){ //intra4x4 is bXXX..1
             int i;
             int di = 1;
             if(dct8x8_allowed && get_bits1(&sl->gb)){
                 mb_type |= MB_TYPE_8x8DCT;
                 di = 4;
             }
-
 //                fill_intra4x4_pred_table(h);
             for(i=0; i<16; i+=di){
                 int mode = pred_intra_mode(h, sl, i);
@@ -808,7 +809,7 @@ decode_intra_mb:
         } else {
             sl->chroma_pred_mode = DC_128_PRED8x8;
         }
-    }else if(partition_count==4){
+    }else if(partition_count==4){ // not intra and partition count = 4
         int i, j, sub_partition_count[4], list, ref[2][4];
 
         if (sl->slice_type_nos == AV_PICTURE_TYPE_B) {
@@ -912,13 +913,13 @@ decode_intra_mb:
                 }
             }
         }
-    }else if(IS_DIRECT(mb_type)){
+    }else if(IS_DIRECT(mb_type)){ // not intra, not partition count=4, is direct
         ff_h264_pred_direct_motion(h, sl, &mb_type);
         dct8x8_allowed &= h->ps.sps->direct_8x8_inference_flag;
-    }else{
+    }else{ // not intra, not partition count = 4, not direct
         int list, mx, my, i;
          //FIXME we should set ref_idx_l? to 0 if we use that later ...
-        if(IS_16X16(mb_type)){
+        if(IS_16X16(mb_type)){ // if 16x16
             for (list = 0; list < sl->list_count; list++) {
                     unsigned int val;
                     if(IS_DIR(mb_type, 0, list)){
@@ -948,7 +949,7 @@ decode_intra_mb:
                 }
             }
         }
-        else if(IS_16X8(mb_type)){
+        else if(IS_16X8(mb_type)){ // not 16x16, is 16x8
             for (list = 0; list < sl->list_count; list++) {
                     for(i=0; i<2; i++){
                         unsigned int val;
@@ -985,7 +986,7 @@ decode_intra_mb:
                     fill_rectangle(sl->mv_cache[list][ scan8[0] + 16*i ], 4, 2, 8, val, 4);
                 }
             }
-        }else{
+        }else{ // not 16x16, 16x8, is 8x16
             av_assert2(IS_8X16(mb_type));
             for (list = 0; list < sl->list_count; list++) {
                     for(i=0; i<2; i++){
@@ -1026,10 +1027,10 @@ decode_intra_mb:
         }
     }
 
-    if(IS_INTER(mb_type))
+    if(IS_INTER(mb_type)) // bXXX..111XXX
         write_back_motion(h, sl, mb_type);
 
-    if(!IS_INTRA16x16(mb_type)){
+    if(!IS_INTRA16x16(mb_type)){ // not bXXX..10
         cbp= get_ue_golomb(&sl->gb);
 
         if(decode_chroma){
@@ -1120,7 +1121,7 @@ decode_intra_mb:
                     }
             }
 
-            if(cbp&0x20){
+            if(cbp&0x20){ //cbp&32 //cbp>32
                 for(chroma_idx=0; chroma_idx<2; chroma_idx++){
                     const uint32_t *qmul = h->ps.pps->dequant4_coeff[chroma_idx+1+(IS_INTRA( mb_type ) ? 0:3)][sl->chroma_qp[chroma_idx]];
                     int16_t *mb = sl->mb + (16*(16 + 16*chroma_idx) << pixel_shift);

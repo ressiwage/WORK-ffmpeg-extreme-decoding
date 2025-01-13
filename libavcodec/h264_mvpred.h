@@ -46,14 +46,27 @@ static av_always_inline int pred_intra_mode(const H264Context *h,
     const int left   = sl->intra4x4_pred_mode_cache[index8 - 1];
     const int top    = sl->intra4x4_pred_mode_cache[index8 - 8];
     const int min    = FFMIN(left, top);
-
+    // static int simplify_pred[] = {0,1,2, 3, 4, 3, 3, 4, 2};
+    static int simplify_pred[] = {2,2,2,2,2,2,2,2,2};
     ff_tlog(h->avctx, "mode:%d %d min:%d\n", left, top, min);
 
     if (min < 0)
         return DC_PRED;
     else
-        return min;
+        return simplify_pred[min];
 }
+
+/*
+#define VERT_PRED              0
+#define HOR_PRED               1
+#define DC_PRED                2
+#define DIAG_DOWN_LEFT_PRED    3
+#define DIAG_DOWN_RIGHT_PRED   4
+#define VERT_RIGHT_PRED        5
+#define HOR_DOWN_PRED          6
+#define VERT_LEFT_PRED         7
+#define HOR_UP_PRED            8
+ */
 
 static av_always_inline void write_back_intra_pred_mode(const H264Context *h,
                                                         H264SliceContext *sl)
@@ -62,9 +75,10 @@ static av_always_inline void write_back_intra_pred_mode(const H264Context *h,
     int8_t *i4x4_cache = sl->intra4x4_pred_mode_cache;
 
     AV_COPY32(i4x4, i4x4_cache + 4 + 8 * 4);
-    i4x4[4] = i4x4_cache[7 + 8 * 3];
-    i4x4[5] = i4x4_cache[7 + 8 * 2];
-    i4x4[6] = i4x4_cache[7 + 8 * 1];
+    // (((av_alias32 *) (i4x4))->u32 = (const av_alias32 *) (i4x4_cache + 4 + 8 * 4))->u32 //i4x4.u32 = i4x4_cache[-1].u32 // copy 4 last bytes from cache to i4x4
+    i4x4[4] = i4x4_cache[7 + 8 * 3]; //32th to 5th
+    i4x4[5] = i4x4_cache[7 + 8 * 2]; //24th to 6th
+    i4x4[6] = i4x4_cache[7 + 8 * 1]; //15th to 7th
 }
 
 static av_always_inline void write_back_non_zero_count(const H264Context *h,
@@ -293,6 +307,9 @@ static av_always_inline void pred_16x8_motion(const H264Context *const h,
                                               int n, int list, int ref,
                                               int *const mx, int *const my)
 {
+    // как правило ref_cache[list][x] = ref, x={y-8|y-1}
+    // если n=0 && ref_cache[list][x-8] = ref -> mx, my = mv_cache[list][x-8]
+    // если n!=0 && ref_cache[list][x-1] = ref -> mx, my = mv_cache[list][x-1]
     if (n == 0) {
         const int top_ref      = sl->ref_cache[list][scan8[0] - 8];
         const int16_t *const B = sl->mv_cache[list][scan8[0] - 8];

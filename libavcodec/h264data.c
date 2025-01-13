@@ -62,7 +62,9 @@ const uint8_t ff_h264_chroma422_dc_scan[8] = {
     (0 + 3 * 2) * 16, (1 + 1 * 2) * 16,
     (1 + 2 * 2) * 16, (1 + 3 * 2) * 16,
 };
-
+//for info see table itu-t h.264 page 97
+// pred_mode = {0,1,2,3} = {vert, hor, DC, plane}
+// FIXME ВСЁ ПЕРЕПУТАНО!! в стандарте vert, hor, dc, plane = 0,1,2,3; а тут vert, hor, dc, plane = 2,1,0,3
 const IMbInfo ff_h264_i_mb_type_info[26] = {
     { MB_TYPE_INTRA4x4,  -1,  -1 },
     { MB_TYPE_INTRA16x16, 2,   0 },
@@ -92,7 +94,7 @@ const IMbInfo ff_h264_i_mb_type_info[26] = {
     { MB_TYPE_INTRA_PCM,  -1, -1 },
 };
 
-const PMbInfo ff_h264_p_mb_type_info[5] = {
+const PMbInfo ff_h264_p_mb_type_info[5] = {  // itu-t h.264 table 7-13 page 100(120)
     { MB_TYPE_16x16 | MB_TYPE_P0L0,                               1 },
     { MB_TYPE_16x8  | MB_TYPE_P0L0 | MB_TYPE_P1L0,                2 },
     { MB_TYPE_8x16  | MB_TYPE_P0L0 | MB_TYPE_P1L0,                2 },
@@ -100,14 +102,15 @@ const PMbInfo ff_h264_p_mb_type_info[5] = {
     { MB_TYPE_8x8   | MB_TYPE_P0L0 | MB_TYPE_P1L0 | MB_TYPE_REF0, 4 },
 };
 
-const PMbInfo ff_h264_p_sub_mb_type_info[4] = {
+
+const PMbInfo ff_h264_p_sub_mb_type_info[4] = { // itu-t h.264 table 7-13 page 100(120)
     { MB_TYPE_16x16 | MB_TYPE_P0L0, 1 },
     { MB_TYPE_16x8  | MB_TYPE_P0L0, 2 },
     { MB_TYPE_8x16  | MB_TYPE_P0L0, 2 },
     { MB_TYPE_8x8   | MB_TYPE_P0L0, 4 },
 };
 
-const PMbInfo ff_h264_b_mb_type_info[23] = {
+const PMbInfo ff_h264_b_mb_type_info[23] = { // itu-t h.264 table 7-14 page 101(121)
     { MB_TYPE_DIRECT2 | MB_TYPE_L0L1,                                              1, },
     { MB_TYPE_16x16   | MB_TYPE_P0L0,                                              1, },
     { MB_TYPE_16x16   | MB_TYPE_P0L1,                                              1, },
@@ -132,6 +135,8 @@ const PMbInfo ff_h264_b_mb_type_info[23] = {
     { MB_TYPE_8x16    | MB_TYPE_P0L0 | MB_TYPE_P0L1 | MB_TYPE_P1L0 | MB_TYPE_P1L1, 2, },
     { MB_TYPE_8x8     | MB_TYPE_P0L0 | MB_TYPE_P0L1 | MB_TYPE_P1L0 | MB_TYPE_P1L1, 4, },
 };
+
+
 
 const PMbInfo ff_h264_b_sub_mb_type_info[13] = {
     { MB_TYPE_DIRECT2,                                                           1, },

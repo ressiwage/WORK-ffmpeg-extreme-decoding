@@ -2592,7 +2592,6 @@ static int decode_slice(struct AVCodecContext *avctx, void *arg)
             return ret;
 
         ff_h264_init_cabac_states(h, sl);
-
         for (;;) {
             int ret, eos;
             if (sl->mb_x + sl->mb_y * h->mb_width >= sl->next_slice_idx) {
@@ -2665,7 +2664,6 @@ static int decode_slice(struct AVCodecContext *avctx, void *arg)
     } else {
         for (;;) {
             int ret;
-
             if (sl->mb_x + sl->mb_y * h->mb_width >= sl->next_slice_idx) {
                 av_log(h->avctx, AV_LOG_ERROR, "Slice overlaps with next at %d\n",
                        sl->next_slice_idx);
@@ -2673,7 +2671,6 @@ static int decode_slice(struct AVCodecContext *avctx, void *arg)
                              sl->mb_y, ER_MB_ERROR);
                 return AVERROR_INVALIDDATA;
             }
-
             ret = ff_h264_decode_mb_cavlc(h, sl);
 
             if (ret >= 0)

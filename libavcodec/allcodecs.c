@@ -996,14 +996,11 @@ static const AVCodec *find_codec(enum AVCodecID id, int (*x)(const AVCodec *))
         if (p->id == id) {
             if (p->capabilities & AV_CODEC_CAP_EXPERIMENTAL && !experimental) {
                 experimental = p;
-            } else{
-                // printf("debug from find_codec1: %s\n", p->name);
-
+            } else
                 return p;
-                }
         }
     }
-    // printf("debug from find_codec2: %s\n", experimental->name);
+
     return experimental;
 }
 
@@ -1013,7 +1010,7 @@ const AVCodec *avcodec_find_encoder(enum AVCodecID id)
 }
 
 const AVCodec *avcodec_find_decoder(enum AVCodecID id)
-{
+{   
     return find_codec(id, av_codec_is_decoder);
 }
 
